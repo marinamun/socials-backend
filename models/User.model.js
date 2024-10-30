@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String,
-    default: "../media/defaultPhoto.png",
+    default: "http://localhost:5000/media/defaultPhoto.png",
   },
   bio: {
     type: String,

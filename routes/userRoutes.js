@@ -1,11 +1,23 @@
 const express = require("express");
 const User = require("../models/User.model");
 const router = express.Router();
+//for tokens to login the user and sign them out
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+
+
 
 // To create a user
 router.post("/", async (req, res) => {
-  const newUser = new User(req.body);
   try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+    // Create a new user with the hashed password
+    const newUser = new User({
+      ...req.body,
+      password: hashedPassword,
+    });
+
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (err) {
@@ -49,6 +61,32 @@ router.delete("/:id", async (req, res) => {
     res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(400).json(err);
+  }
+});
+
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Check password using bcrypt.compare
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    const token = jwt.sign({ id: user._id }, "your_jwt_secret_key", {
+      expiresIn: "1h",
+    });
+
+    // Send back the user data (to display in profile) and token(to sign out)
+    res.status(200).json({ message: "Login successful", token, user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 

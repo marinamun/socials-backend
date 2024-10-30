@@ -31,6 +31,10 @@ const userRoutes = require("./routes/userRoutes.js");
 
 app.use(express.json());
 
+const path = require("path");
+// Serve static files from the "media" directory
+app.use("/media", express.static(path.join(__dirname, "media")));
+
 // Use the user routes
 app.use("/api/users", userRoutes);
 
