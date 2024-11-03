@@ -38,6 +38,14 @@ app.use("/media", express.static(path.join(__dirname, "media")));
 // Use the user routes
 app.use("/api/users", userRoutes);
 
+//FOR POSTS:
+const postRoutes = require("./routes/postRoutes");
+app.use("/api/posts", postRoutes);
+
+//FOR COMMENTS:
+const commentRoutes = require("./routes/commentRoutes");
+app.use("/api/comments", commentRoutes);
+
 //START THE SERVER
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

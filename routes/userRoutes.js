@@ -5,8 +5,6 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-
-
 // To create a user
 router.post("/", async (req, res) => {
   try {
@@ -22,6 +20,23 @@ router.post("/", async (req, res) => {
     res.status(201).json(savedUser);
   } catch (err) {
     res.status(400).json(err);
+  }
+});
+
+//Get all users that match the username, for searchbar
+router.get("/search", async (req, res) => {
+  const { username } = req.query;
+
+  try {
+    // Explicitly search by the `username` field
+    const users = await User.find({
+      username: { $regex: new RegExp(username, "i") }, // Case-insensitive regex
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users", error });
   }
 });
 
