@@ -1,14 +1,37 @@
 const express = require("express");
 const Post = require("../models/Post.model");
 const router = express.Router();
+const cloudinary = require("../cloudinaryConfig");
+
 
 // Create a new post
 router.post("/", async (req, res) => {
-  const newPost = new Post(req.body);
+  const { userId, content, uploadedImage } = req.body;
   try {
+    let imageUrl = null;
+
+    // Upload the image to Cloudinary if provided
+    if (uploadedImage) {
+      const uploadResponse = await cloudinary.uploader.upload(
+        `data:image/jpeg;base64,${uploadedImage}`,
+        {
+          folder: "posts",
+        }
+      );
+      imageUrl = uploadResponse.secure_url;
+    }
+
+    // Create a new post with the Cloudinary image URL if available
+    const newPost = new Post({
+      userId,
+      content,
+      image: imageUrl, 
+    });
+
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
   } catch (err) {
+    console.error("Error creating post:", err);
     res.status(400).json(err);
   }
 });
