@@ -1,52 +1,98 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-//CORS
+// Middleware for CORS and JSON
 app.use(cors());
-
-// Use the connection string from MongoDB Compass
-const mongoURI = "mongodb://localhost:27017/socialsDB";
-
-// Connect to MongoDB using Mongoose
-mongoose
-  .connect(mongoURI)
-  .then(() => {
-    console.log("MongoDB connected successfully");
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
-
-app.get("/", (req, res) => {
-  res.send("Hello World");
-});
-
-//FOR USERS:
-// Import user routes
-const userRoutes = require("./routes/userRoutes.js");
-
 app.use(express.json());
 
-const path = require("path");
-// Serve static files from the "media" directory
+// Connect to MongoDB
+const mongoURI = "mongodb://localhost:27017/socialsDB";
+mongoose
+  .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Define routes for Express
+const userRoutes = require("./routes/userRoutes");
+const postRoutes = require("./routes/postRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const textMessageRoutes = require("./routes/textMessageRoutes");
+
+app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/messages", textMessageRoutes);
+
+// Serve static files (if any)
 app.use("/media", express.static(path.join(__dirname, "media")));
 
-// Use the user routes
-app.use("/api/users", userRoutes);
+// Create the HTTP server using Express
+const server = http.createServer(app);
 
-//FOR POSTS:
-const postRoutes = require("./routes/postRoutes");
-app.use("/api/posts", postRoutes);
+// Initialize Socket.IO on the same server
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
+});
 
-//FOR COMMENTS:
-const commentRoutes = require("./routes/commentRoutes");
-app.use("/api/comments", commentRoutes);
+// Import your TextMessage model
+const TextMessage = require("./models/Textmessage.model");
+const { ObjectId } = require("mongoose").Types;
 
-//START THE SERVER
-app.listen(PORT, () => {
+// Handle Socket.IO connections
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("send_message", async (data) => {
+    console.log("Received message data:", data);
+
+    const { Types } = require("mongoose");
+
+/*     console.log("Type of senderId:", typeof data.senderId, "Value:", data.senderId);
+    console.log("Type of recipientId:", typeof data.recipientId, "Value:", data.recipientId); */
+
+    try {
+      if (!Types.ObjectId.isValid(data.senderId) || !Types.ObjectId.isValid(data.recipientId)) {
+        console.error("Invalid ObjectId format");
+        return;
+      }
+
+      const senderObjectId = new Types.ObjectId(data.senderId);
+      const recipientObjectId = new Types.ObjectId(data.recipientId);
+
+      const newMessage = new TextMessage({
+        senderId: senderObjectId,
+        recipientId: recipientObjectId,
+        content: data.content,
+        timestamp: new Date(),
+      });
+
+      await newMessage.save();
+      console.log("Message saved to MongoDB:", newMessage);
+
+      io.emit("receive_message", newMessage);
+    } catch (err) {
+      console.error("Error saving message to MongoDB:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+
+
+// Start the server
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
