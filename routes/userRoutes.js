@@ -3,7 +3,7 @@ const User = require("../models/User.model");
 const router = express.Router();
 //for tokens to login the user and sign them out
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 // To create a user
 router.post("/", async (req, res) => {
