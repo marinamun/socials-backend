@@ -10,7 +10,10 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware for CORS and JSON
 app.use(cors());
-app.use(express.json());
+
+//adjust the size of files that can be uplaoaded
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Connect to MongoDB
 const mongoURI = "mongodb://localhost:27017/socialsDB";
@@ -57,11 +60,14 @@ io.on("connection", (socket) => {
 
     const { Types } = require("mongoose");
 
-/*     console.log("Type of senderId:", typeof data.senderId, "Value:", data.senderId);
+    /*     console.log("Type of senderId:", typeof data.senderId, "Value:", data.senderId);
     console.log("Type of recipientId:", typeof data.recipientId, "Value:", data.recipientId); */
 
     try {
-      if (!Types.ObjectId.isValid(data.senderId) || !Types.ObjectId.isValid(data.recipientId)) {
+      if (
+        !Types.ObjectId.isValid(data.senderId) ||
+        !Types.ObjectId.isValid(data.recipientId)
+      ) {
         console.error("Invalid ObjectId format");
         return;
       }
@@ -89,8 +95,6 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 });
-
-
 
 // Start the server
 server.listen(PORT, () => {

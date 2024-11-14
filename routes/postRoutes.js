@@ -3,7 +3,6 @@ const Post = require("../models/Post.model");
 const router = express.Router();
 const cloudinary = require("../cloudinaryConfig");
 
-
 // Create a new post
 router.post("/", async (req, res) => {
   const { userId, content, uploadedImage } = req.body;
@@ -14,25 +13,29 @@ router.post("/", async (req, res) => {
     if (uploadedImage) {
       const uploadResponse = await cloudinary.uploader.upload(
         `data:image/jpeg;base64,${uploadedImage}`,
-        {
-          folder: "posts",
-        }
+        { folder: "posts" }
       );
       imageUrl = uploadResponse.secure_url;
     }
 
-    // Create a new post with the Cloudinary image URL if available
-    const newPost = new Post({
+  
+    let newPost = new Post({
       userId,
       content,
-      image: imageUrl, 
+      image: imageUrl,
     });
 
     const savedPost = await newPost.save();
-    res.status(201).json(savedPost);
+
+    const populatedPost = await Post.findById(savedPost._id).populate(
+      "userId",
+      "username profilePicture"
+    );
+
+    res.status(201).json(populatedPost);
   } catch (err) {
     console.error("Error creating post:", err);
-    res.status(400).json(err);
+    res.status(400).json({ error: "Failed to create post" });
   }
 });
 
@@ -47,15 +50,20 @@ router.get("/", async (req, res) => {
 });
 
 // Get a post
+// Get a single post by ID
 router.get("/:id", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate("userId");
+    const post = await Post.findById(req.params.id).populate(
+      "userId",
+      "username profilePicture"
+    );
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
     res.status(200).json(post);
   } catch (err) {
-    res.status(500).json(err);
+    console.error("Error fetching post:", err);
+    res.status(500).json({ message: "Failed to fetch post" });
   }
 });
 
