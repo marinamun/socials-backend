@@ -16,9 +16,15 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Connect to MongoDB
-const mongoURI = "mongodb://localhost:27017/socialsDB";
+const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/socialsDB";
+
+if (!mongoURI) {
+  console.error("Error: MONGO_URI environment variable not set");
+  process.exit(1);
+}
+
 mongoose
-  .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(mongoURI)
   .then(() => console.log("MongoDB connected successfully"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
